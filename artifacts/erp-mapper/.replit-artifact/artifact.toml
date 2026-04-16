@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "ERP Mapping Agent"
+version = "1.0.0"
+id = "artifacts/erp-mapper"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 22482
+
+[services.development]
+run = "pnpm --filter @workspace/erp-mapper run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/erp-mapper", "run", "build" ]
+publicDir = "artifacts/erp-mapper/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "22482"
+BASE_PATH = "/"

@@ -3,13 +3,15 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: ERP-to-Canonical Field Mapping Agent API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: mapping
+    description: ERP field mapping operations
 paths:
   /healthz:
     get:
@@ -24,6 +26,147 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /mapping/erp-systems:
+    get:
+      operationId: getErpSystems
+      tags: [mapping]
+      summary: Get supported ERP systems
+      description: Returns the list of supported ERP systems
+      responses:
+        "200":
+          description: List of ERP systems
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErpSystemsResponse"
+
+  /mapping/canonical-schemas:
+    get:
+      operationId: getCanonicalSchemas
+      tags: [mapping]
+      summary: Get supported canonical document types
+      description: Returns the list of supported canonical document schemas
+      responses:
+        "200":
+          description: List of canonical schemas
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CanonicalSchemasResponse"
+
+  /mapping/run:
+    post:
+      operationId: runMapping
+      tags: [mapping]
+      summary: Run ERP to canonical field mapping
+      description: Parses the ERP JSON, loads the canonical schema, and runs AI-powered field mapping
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RunMappingRequest"
+      responses:
+        "200":
+          description: Mapping results
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RunMappingResponse"
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /mapping/export:
+    post:
+      operationId: exportMapping
+      tags: [mapping]
+      summary: Export mapping results as Excel
+      description: Generates and returns an Excel file with the SMR 5-column mapping output
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ExportMappingRequest"
+      responses:
+        "200":
+          description: Excel file download URL
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExportMappingResponse"
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /mapping/sessions:
+    get:
+      operationId: getMappingSessions
+      tags: [mapping]
+      summary: Get recent mapping sessions
+      description: Returns a list of recent mapping sessions with metadata
+      responses:
+        "200":
+          description: List of mapping sessions
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MappingSessionsResponse"
+
+  /mapping/sessions/{id}:
+    get:
+      operationId: getMappingSession
+      tags: [mapping]
+      summary: Get a specific mapping session
+      description: Returns the full details of a mapping session including all mappings
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Mapping session details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MappingSessionDetail"
+        "404":
+          description: Session not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /mapping/stats:
+    get:
+      operationId: getMappingStats
+      tags: [mapping]
+      summary: Get mapping statistics
+      description: Returns aggregate stats on all mapping sessions
+      responses:
+        "200":
+          description: Mapping statistics
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MappingStatsResponse"
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +177,342 @@ components:
       required:
         - status
 
+    ErpSystem:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+      required:
+        - id
+        - name
+        - description
+
+    ErpSystemsResponse:
+      type: object
+      properties:
+        erpSystems:
+          type: array
+          items:
+            $ref: "#/components/schemas/ErpSystem"
+      required:
+        - erpSystems
+
+    CanonicalSchema:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        documentType:
+          type: string
+        version:
+          type: string
+        description:
+          type: string
+      required:
+        - id
+        - name
+        - documentType
+        - version
+        - description
+
+    CanonicalSchemasResponse:
+      type: object
+      properties:
+        schemas:
+          type: array
+          items:
+            $ref: "#/components/schemas/CanonicalSchema"
+      required:
+        - schemas
+
+    RunMappingRequest:
+      type: object
+      properties:
+        erpSystemId:
+          type: string
+          description: The ERP system identifier
+        documentType:
+          type: string
+          description: The canonical document type (order, invoice, shipment, purchaseorder)
+        erpJson:
+          type: object
+          description: The raw ERP JSON export data
+          additionalProperties: true
+      required:
+        - erpSystemId
+        - documentType
+        - erpJson
+
+    ErpField:
+      type: object
+      properties:
+        fieldKey:
+          type: string
+        jsonPath:
+          type: string
+        level:
+          type: string
+          enum: [header, line]
+        sampleValue:
+          nullable: true
+        dataType:
+          type: string
+      required:
+        - fieldKey
+        - jsonPath
+        - level
+        - dataType
+
+    MappingResult:
+      type: object
+      properties:
+        canonicalXpath:
+          type: string
+        dialectTerm:
+          type: string
+        erpJsonPath:
+          type: string
+        erpFieldKey:
+          type: string
+        confidence:
+          type: number
+          minimum: 0
+          maximum: 1
+        matchStrategy:
+          type: string
+          enum: [rule_based, ai_semantic, fuzzy, unmapped]
+        rationale:
+          type: string
+        smrConstruct:
+          type: string
+          enum: [Field, Record, Composite]
+        compositeRef:
+          type: string
+        needsReview:
+          type: boolean
+      required:
+        - canonicalXpath
+        - dialectTerm
+        - erpJsonPath
+        - erpFieldKey
+        - confidence
+        - matchStrategy
+        - rationale
+        - smrConstruct
+        - compositeRef
+        - needsReview
+
+    RunMappingResponse:
+      type: object
+      properties:
+        sessionId:
+          type: string
+        erpSystemId:
+          type: string
+        documentType:
+          type: string
+        erpFields:
+          type: array
+          items:
+            $ref: "#/components/schemas/ErpField"
+        mappings:
+          type: array
+          items:
+            $ref: "#/components/schemas/MappingResult"
+        stats:
+          $ref: "#/components/schemas/SessionStats"
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - sessionId
+        - erpSystemId
+        - documentType
+        - erpFields
+        - mappings
+        - stats
+        - createdAt
+
+    SessionStats:
+      type: object
+      properties:
+        totalErpFields:
+          type: integer
+        totalCanonicalFields:
+          type: integer
+        mappedFields:
+          type: integer
+        unmappedFields:
+          type: integer
+        highConfidence:
+          type: integer
+        mediumConfidence:
+          type: integer
+        lowConfidence:
+          type: integer
+        needsReview:
+          type: integer
+        averageConfidence:
+          type: number
+      required:
+        - totalErpFields
+        - totalCanonicalFields
+        - mappedFields
+        - unmappedFields
+        - highConfidence
+        - mediumConfidence
+        - lowConfidence
+        - needsReview
+        - averageConfidence
+
+    ExportMappingRequest:
+      type: object
+      properties:
+        sessionId:
+          type: string
+      required:
+        - sessionId
+
+    ExportMappingResponse:
+      type: object
+      properties:
+        downloadUrl:
+          type: string
+        filename:
+          type: string
+      required:
+        - downloadUrl
+        - filename
+
+    MappingSession:
+      type: object
+      properties:
+        id:
+          type: string
+        erpSystemId:
+          type: string
+        erpSystemName:
+          type: string
+        documentType:
+          type: string
+        totalFields:
+          type: integer
+        mappedFields:
+          type: integer
+        averageConfidence:
+          type: number
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - erpSystemId
+        - erpSystemName
+        - documentType
+        - totalFields
+        - mappedFields
+        - averageConfidence
+        - createdAt
+
+    MappingSessionsResponse:
+      type: object
+      properties:
+        sessions:
+          type: array
+          items:
+            $ref: "#/components/schemas/MappingSession"
+      required:
+        - sessions
+
+    MappingSessionDetail:
+      type: object
+      properties:
+        id:
+          type: string
+        erpSystemId:
+          type: string
+        erpSystemName:
+          type: string
+        documentType:
+          type: string
+        erpFields:
+          type: array
+          items:
+            $ref: "#/components/schemas/ErpField"
+        mappings:
+          type: array
+          items:
+            $ref: "#/components/schemas/MappingResult"
+        stats:
+          $ref: "#/components/schemas/SessionStats"
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - erpSystemId
+        - erpSystemName
+        - documentType
+        - erpFields
+        - mappings
+        - stats
+        - createdAt
+
+    MappingStatsResponse:
+      type: object
+      properties:
+        totalSessions:
+          type: integer
+        totalFieldsMapped:
+          type: integer
+        averageConfidenceOverall:
+          type: number
+        sessionsByErp:
+          type: array
+          items:
+            type: object
+            properties:
+              erpSystemId:
+                type: string
+              erpSystemName:
+                type: string
+              count:
+                type: integer
+            required:
+              - erpSystemId
+              - erpSystemName
+              - count
+        sessionsByDocType:
+          type: array
+          items:
+            type: object
+            properties:
+              documentType:
+                type: string
+              count:
+                type: integer
+            required:
+              - documentType
+              - count
+      required:
+        - totalSessions
+        - totalFieldsMapped
+        - averageConfidenceOverall
+        - sessionsByErp
+        - sessionsByDocType
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+        details:
+          type: string
+      required:
+        - error
