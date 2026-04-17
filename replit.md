@@ -10,13 +10,10 @@ A full-stack AI-powered application that maps ERP system JSON export fields to O
 - **Node.js version**: 24
 - **Package manager**: pnpm
 - **TypeScript version**: 5.9
-- **API framework**: Express 5
-- **Database**: PostgreSQL + Drizzle ORM
-- **Validation**: Zod (`zod/v4`), `drizzle-zod`
-- **API codegen**: Orval (from OpenAPI spec)
-- **Build**: esbuild (CJS bundle)
+- **API framework**: Python FastAPI + Uvicorn (Python 3.12)
+- **Database**: PostgreSQL + asyncpg (Python) / Drizzle ORM (schema management)
 - **Frontend**: React + Vite + TailwindCSS v4 + shadcn/ui
-- **AI**: OpenAI via Replit AI Integrations (gpt-5-mini)
+- **AI**: OpenAI via Replit AI Integrations (gpt-5-mini), async parallel batching
 - **Charts**: Recharts
 - **Animations**: Framer Motion
 - **Routing**: Wouter
