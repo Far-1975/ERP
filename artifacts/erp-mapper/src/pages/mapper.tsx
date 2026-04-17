@@ -115,7 +115,7 @@ export function Mapper() {
     }
     setStep(3);
     try {
-      const res = await runMapping.mutateAsync({ erpSystemId, documentType, erpJson: parsed });
+      const res = await runMapping.mutateAsync({ data: { erpSystemId, documentType, erpJson: parsed } });
       setResult(res);
     } catch (err) {
       setStep(2);
@@ -124,7 +124,7 @@ export function Mapper() {
 
   const handleExport = async () => {
     if (!result?.sessionId) return;
-    const res = await exportMapping.mutateAsync({ sessionId: result.sessionId });
+    const res = await exportMapping.mutateAsync({ data: { sessionId: result.sessionId } });
     const a = document.createElement("a");
     a.href = res.downloadUrl;
     a.download = res.filename;
